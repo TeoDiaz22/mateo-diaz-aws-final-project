@@ -1,6 +1,6 @@
 # Final project for the AWS course
 
-This is a Terraform project for managing your infrastructure.
+This is a Terraform project that will be used to develop the final project of the AWS course.
 
 ## Getting Started
 
