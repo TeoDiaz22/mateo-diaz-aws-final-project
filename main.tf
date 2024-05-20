@@ -5,6 +5,9 @@ provider "aws" {
 
 resource "aws_vpc" "fis_vpc" {
   cidr_block = "10.0.0.0/16"
+  tags = {
+    Name = "FIS VPC"
+  }
 }
 
 resource "aws_subnet" "public_subnet" {
@@ -78,7 +81,7 @@ data "aws_ami" "ubuntu" {
   most_recent = true
   filter {
     name = "name"
-    values = [ "ubuntu/image/hvm-ssd/ubuntu-focal-20.04-amd64-server-*" ]
+    values = [ "ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*" ]
   }
 
   filter {
@@ -89,19 +92,42 @@ data "aws_ami" "ubuntu" {
   owners = [ "099720109477" ]
 }
 
-resource "aws_instance" "ubuntu_aeis_instance" {
-  ami = data.aws_ami.ubuntu.id
-  instance_type = "t2.micro"
-  subnet_id = aws_subnet.public_subnet.id
-}
 
 resource "aws_network_interface" "aeis_network_interface" {
   subnet_id = aws_subnet.public_subnet.id
-  private_ips = ["10.0.1.22"]    
+  private_ips = ["10.0.1.23"]    
   security_groups = [aws_security_group.web_server_sg.id]
 }
 
 resource "aws_eip" "aeis_ip" {
-  associate_with_private_ip = "10.0.1.22"
+  associate_with_private_ip = tolist(aws_network_interface.aeis_network_interface.private_ips)[0]
   network_interface = aws_network_interface.aeis_network_interface.id
+  instance = aws_instance.ubuntu_aeis_instance.id
 }
+
+resource "aws_instance" "ubuntu_aeis_instance" {
+  ami = data.aws_ami.ubuntu.id
+  instance_type = "t2.micro"
+  network_interface {
+    network_interface_id = aws_network_interface.aeis_network_interface.id
+    device_index = 0
+  }
+  user_data = <<-EOF
+              #!bin/bash
+              sudo apt update -y
+              sudo apt install nginx -y
+              sudo systemctl start nginx
+              EOF
+  tags = {
+    Name = "Ubuntu AEIS instance"
+  }
+}
+
+output "public_aeis_ip" {
+  value = aws_eip.aeis_ip.public_ip
+}
+
+output "private_aeis_ip" {
+  value = aws_eip.aeis_ip.private_ip
+}
+
