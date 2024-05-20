@@ -13,15 +13,24 @@ resource "aws_vpc" "fis_vpc" {
 resource "aws_subnet" "public_subnet" {
   cidr_block = "10.0.1.0/24"
   vpc_id = aws_vpc.fis_vpc.id
+  tags = {
+    Name = "Public Subnet"
+  }
 }
 
 resource "aws_subnet" "private_subnet" {
   cidr_block = "10.0.2.0/24"
   vpc_id = aws_vpc.fis_vpc.id
+  tags = {
+    Name = "Private Subnet"
+  }
 }
 
 resource "aws_internet_gateway" "fis_public_internet_gateway" {
   vpc_id = aws_vpc.fis_vpc.id
+  tags = {
+    Name = "FIS public internet gateway"
+  }
 }
 
 resource "aws_route_table" "fis_public_subnet_route_table" {
@@ -35,6 +44,10 @@ resource "aws_route_table" "fis_public_subnet_route_table" {
     route {
         ipv6_cidr_block = "::/0"
         gateway_id = aws_internet_gateway.fis_public_internet_gateway.id
+    }
+
+    tags = {
+      Name = "FIS public subnet route table"
     }
 }
 
@@ -72,7 +85,7 @@ resource "aws_security_group" "web_server_sg" {
   } 
 
   tags = {
-    Name = "aeis security group"
+    Name = "AEIS security group"
   }          
 }
 
@@ -97,12 +110,18 @@ resource "aws_network_interface" "aeis_network_interface" {
   subnet_id = aws_subnet.public_subnet.id
   private_ips = ["10.0.1.23"]    
   security_groups = [aws_security_group.web_server_sg.id]
+  tags = {
+    Name = "AEIS network interface"
+  }
 }
 
 resource "aws_eip" "aeis_ip" {
   associate_with_private_ip = tolist(aws_network_interface.aeis_network_interface.private_ips)[0]
   network_interface = aws_network_interface.aeis_network_interface.id
   instance = aws_instance.ubuntu_aeis_instance.id
+  tags = {
+    Name = "AEIS elasticIP"
+  }
 }
 
 resource "aws_instance" "ubuntu_aeis_instance" {
